@@ -1,0 +1,303 @@
+
+Both fully- and semi-autonomous operation of optical tweezers require
+the capability to trap a particle and plan its path through the
+workspace; avoiding collisions with other components in real-time.
+The probability that a given particle will be trapped within a
+predictable spatial region about the laser beam focus, or {\em
+  trapping probability}, is a critical aspect of this real-time motion
+planning problem.  As it is infeasible to determine trapping
+probabilities through real-world experiments due to a large parameter
+space (including, for example, initial particle position, neighboring
+workspace component existence, motion of laser), we have developed a
+computational framework in which trapping probabilities can be
+determined through optical tweezers simulation.
+
+\subsection{Simulated Particle Motion}
+Our initial code operates on glass and silica microspheres, as these are
+well-studied in the literature~\cite{wright1994parametric}.  Furthermore,
+properties of these spheres can be accurately modeled using theoretically- and
+experimentally-verified equations.
+
+In general, any moving component in the workspace will experience hydrodynamic
+forces coupled with a rapidly fluctuating force, the result of frequent and
+numerous collisions with surrounding liquid molecules.  We can model these
+closely connected forces using Langevin's equation~\cite{gardiner1985handbook,
+langevin1908brownianmotion}. We use model given in ~\cite{balijepalli2010stochastic}.
+Given a velocity $V$, we describe the change in
+velocity over time as:
+\begin{equation}
+\label{eq:langevins-equation}
+ \frac{dV(t)}{dt} = -\frac{\gamma}{m}V(t) + \frac{\xi}{m}\Gamma(t)
+\end{equation}
+
+The hydrodynamic forces over time ($t$), are a function of velocity
+($V$), mass ($m$), and drag ($\gamma$).  The drag coefficient $\gamma$
+is given by Stokes' Law~\cite{girault1979finite} as $\gamma = 6 \pi
+\eta r$, with $\eta$ representing the fluid viscosity as a function of
+temperature and $r$ representing the radius of the silica sphere, in
+this case.  The stochastic, rapidly fluctuating force $\Gamma$ is
+scaled by a constant $\xi$ satisfying the fluctuation-dissipation
+theorem~\cite{weissbluth1989photon}, which is defined as $\xi =
+\sqrt{2 \gamma K_B T}$, with $K_B$ representing Boltzmann's
+constant~\cite{grassia2001dissipation}.  The stochastic term $\Gamma$
+prevents a direct analytic solution to Langevin's equation; as such,
+our framework uses a finite difference expression of
+Equation~\ref{eq:langevins-equation}.  
+The stochastic term $\Gamma$ is substituted by a appropriately scaled normal distribution
+$N(0,1/\delta t)$ where $\delta t$ is the finite time step. The term  
+$1/\sqrt{\delta t}$ is absorbed into a scaling constant as described in~\cite{balijepalli2010stochastic}.
+
+
+%The hydrodynamic forces over time ($t$), are a function of velocity
+%($V$), mass ($m$), and drag ($\gamma$).  The drag coefficient $\gamma$
+%is given by Stokes' Law~\cite{girault1979finite} as $\gamma = 6 \pi
+%\eta r$, with $\eta$ representing the fluid viscosity as a function of
+%temperature and $r$ representing the radius of the silica sphere, in
+%this case.  The stochastic, rapidly fluctuating force $\Gamma$ is
+%scaled by a constant $\xi$ satisfying the fluctuation-dissipation
+%theorem~\cite{weissbluth1989photon}, which is defined as $\xi =
+%\sqrt{2 \gamma K_B T}$, with $K_B$ representing Boltzmann's
+%constant~\cite{grassia2001dissipation}.  The stochastic term $\Gamma$
+%prevents a direct analytic solution to Langevin's equation; as such,
+%our framework uses a finite difference expression of
+%Equation~\ref{eq:langevins-equation}.  We substitute a normal
+%distribution $N(0,1)$ for $\Gamma$ and alter the scaling constant
+%$\xi$ appropriately to include $\delta t$, the finite time step.
+
+We combine the finite difference form of Langevin's equations with an
+enumeration of all other forces affecting a silica sphere in the workspace to
+yield Equation~\ref{eq:numerical-integration-equation}.  The external force
+factor $F_{ext}$ includes the constant (for a sphere) forces of gravity and
+buoyancy, as well as the all-important optical trapping force 
+applied by the laser to the particle.
+
+%\begin{equation}
+%\label{eq:numerical-integration-equation}
+% \frac{V(t + \delta t) - V(t)}{\delta t}  = -\frac{\gamma}{m}V(t) + \frac{1}{m}
+%\sqrt{\frac{2 \gamma K_B T}{\delta t}} N(0,1) + \frac{F_{ext}}{m} 
+%\end{equation}
+
+\begin{equation}
+\label{eq:numerical-integration-equation}
+ A(t + \delta t)  = -\frac{\gamma}{m}V(t) + \frac{1}{m}
+\sqrt{\frac{2 \gamma K_B T}{\delta t}} N(0,1) + \frac{F_{ext}}{m} 
+\end{equation}
+
+
+We explicitly integrate Equation~\ref{eq:numerical-integration-equation}
+to obtain a simulation of particle movement over time.  In practice, the most
+popular explicit integration techniques include fourth-order Runge-Kutta
+methods~\cite{jameson1981numerical}, the Gear predictor-corrector
+method~\cite{allen1990computer}, and second-order ``velocity'' Verlet
+integration~\cite{verlet1968computer}.  Each is appropriate in certain
+situations; as such, we use Verlet integration
+(Equations~\ref{eq:velocity-verlet-integration-position}
+and~\ref{eq:velocity-verlet-integration-velocity}) due to its conservation of
+energy at larger time steps and ease of computation, as discussed
+in~\cite{balijepalli2010stochastic}.  Since the time step has a direct effect on
+the number of iterations required to run a simulation (and thus its runtime), we
+are interested in maximizing time step size while maintaining tight error
+bounds.
+
+\begin{equation}
+ \label{eq:velocity-verlet-integration-position}
+ X(t + \delta t) = X(t) + V(t)\delta t + \frac{1}{2} A(t) \delta t^2 + O(\delta
+t^4)
+\end{equation}
+
+\begin{equation}
+ \label{eq:velocity-verlet-integration-velocity}
+ V(t + \delta t) = V(t) + \frac{A(t + \delta t) + A(t)}{2} \delta t + O(\delta
+t^2)
+\end{equation}
+
+Given velocity $V(t)$ and external force factor $F_{ext}$, we compute the acceleration
+$A(t + \delta t )$ at the next time step using
+Equation~\ref{eq:numerical-integration-equation}. From here, the
+velocity Verlet method provides the next position, $X(t + \delta t)$,
+and velocity, $V(t + \delta t)$, in a single pass.
+
+
+The characteristic time scale of our entire model is given by the
+relaxation time $\frac{m}{\gamma}$, with $\gamma = 6 \pi \eta r$ the drag
+coefficient of Stokes' equations; this is the time needed for a particle's
+initial velocity to converge to thermal equilibrium.  In our experiments, the
+numerical integration time step $\delta t$ is set to the nearest multiple of
+$100$ ns such that $\delta t << \frac{m}{\gamma}$. Choosing such a small $\delta
+t$ provides an opportunity to observe interesting nonequilibrium behavior in the
+simulation.  Furthermore, this small time step decreases maximum error in both
+velocity and position, bounded by the velocity Verlet to $O(\delta t^2)$ and
+$O(\delta t^4)$, respectively.
+
+%\paragraph{Calculation of Force Fields.}
+Our particle simulation framework accepts either a continuous or discretely
+sampled force field.  In our experiments, we choose to represent the optical
+field discretely.  Force values are provided by
+numerically integrating the basic scattering and gradient forces of
+radiation (see Ashkin's seminal paper~\cite{ashkin1986observation}).  Such
+integration is
+typically done by tracing representative rays of light from the laser
+position through the workspace to the laser focus -- and possibly
+through microspheres in the workspace.  By tracing the reflection and
+refraction of these simulated rays, a reliable estimate of both the
+scattering and gradient forces can be computed.  In our prototype
+implementation, we rely on code written
+in~\cite{banerjee2009generating} to obtain these forces.
+
+\subsection{Trapping Probability Estimates}
+
+To estimate trapping probabilities, particle trajectory simulation
+is performed multiple times at a given point in the parameter
+space. The simulation is conducted by starting the particle at the
+designated location. The trapping probability is estimated as a ratio
+of the number the times the sphere gets trapped by the laser beam over
+the total number of trials.
+
+Trapping is a complex phenomenon due to the Brownian motion of the
+particles. If a beam is held stationary for an indefinite period of
+time, then particles far away from the beam are likely to wander
+into the beam due to Brownian motion and eventually be
+trapped. Particles continue to exhibit Brownian motion even after they
+have been trapped. Therefore, trapped particles eventually jump out of
+the trap at practically useful laser powers.  Many different notions
+of trapping probability can be defined based on the context. For the
+purpose of this paper, we are mainly interested in a notion of
+trapping probability which is relevant from the point of view of path
+planning. In this application, the laser beam continues to
+move. Hence, the time available for trapping is relatively small. For
+the purpose of this paper, we have done all trapping probability
+estimates for fixed finite period of time. Methodology presented in
+this paper can be easily used to compute trapping probability as a
+function of the available trapping time.
+
+We have assumed that the Brownian motion inside the trap is
+negligible. Hence, the mean time to escape of the trap is quite large
+with respect to the planning horizon. Therefore, we do not account for
+the possibility of a trapped particle escaping the trap in our
+calculations.  The simulation infrastructure has a built-in capability
+to simulate Brownian motion under the force field. Therefore, it can
+automatically account for the situations where a particle will escape
+the trap if the simulation is performed over the long period of time.
+For the figures produced in this paper, we assume a particle to be
+trapped if the probability of a particle escaping the laser within
+$\SI{1}{\deci\second}$ is less than $\frac{1}{N}$, where $N$ is the
+number of simulated trajectories per grid position.
+
+
+
+%\documentclass{article}
+%\begin{document}
+%\todo[inline]{How we calculate trapping probabilities and why it's important}
+
+% Both fully- and semi-autonomous operation of optical tweezers require the
+% capability to trap a particle and plan its path through the workspace, avoiding
+% collisions with other components, in real-time.  The probability that a given
+% particle will be trapped within a predictable spatial region about the laser
+% beam focus, or {\em trapping probability}, is a critical aspect of this
+% real-time motion planning problem.  As it is infeasible to determine trapping
+% probabilities through real-world experiments due to a large parameter space
+% (including, for example, initial particle position, neighboring workspace
+% component existence, motion of laser), we have developed a computational
+% framework in which trapping probabilities can be determined through optical
+% tweezers simulation.
+
+% \subsection{Simulated Particle Motion}
+% Our initial code operates on glass and silica microspheres, as these are
+% well-studied in the literature~\cite{wright1994parametric}.  Furthermore,
+% properties of these spheres can be accurately modeled using theoretically- and
+% experimentally-verified equations.
+
+% In general, any moving component in the workspace will experience hydrodynamic
+% forces coupled with a rapidly fluctuating force, the result of frequent and
+% numerous collisions with surrounding liquid molecules.  We can model these
+% closely connected forces using Langevin's equation~\cite{gardiner1985handbook,
+% langevin1908brownianmotion}. Given a velocity $V$, we describe the change in
+% velocity over time as:
+% \begin{equation}
+% \label{eq:langevins-equation}
+%  \frac{dV(t)}{dt} = -\frac{\gamma}{m}V(t) + \frac{\xi}{m}\Gamma(t)
+% \end{equation}
+
+% The hydrodynamic forces are a function of velocity, mass, and drag.  The drag
+% coefficient $\gamma$ is given by Stokes' Law~\cite{girault1979finite} as $\gamma
+% = 6 \pi \eta r$, with $\eta$ representing the fluid viscosity as a function of
+% temperature and $r$ representing the radius of the silica sphere, in this case. 
+% The stochastic, rapidly fluctuating force $\Gamma$ is scaled by a constant $\xi$
+% satisfying the fluctuation-dissipation theorem~\cite{weissbluth1989photon},
+% which is defined as $\xi = \sqrt{2 \gamma K_B T}$, with $K_B$ representing
+% Boltzmann's constant~\cite{grassia2001dissipation}.  The stochastic term
+% $\Gamma$ prevents a direct analytic solution to Langevin's equation; as such,
+% our framework uses a finite difference expression of
+% Equation~\ref{eq:langevins-equation}.  We substitute a normal distribution
+% $N(0,1)$ for $\Gamma$ and alter the scaling constant $\xi$ appropriately to
+% include $\delta t$, the finite time step.
+
+% We combine the finite difference form of Langevin's equations with an
+% enumeration of all other forces affecting a silica sphere in the workspace to
+% yield Equation~\ref{eq:numerical-integration-equation}.  The external force
+% factor $F_{ext}$ includes the constant (for a sphere) forces of gravity and
+% buoyancy, as well as the all-important optical trapping force 
+% applied by the laser to the particle.
+
+% \begin{equation}
+% \label{eq:numerical-integration-equation}
+%  \frac{V(t + \delta t) - V(t)}{\delta t}  = -\frac{\gamma}{m}V(t) + \frac{1}{m}
+% \sqrt{\frac{2 \gamma K_B T}{\delta t}} N(0,1) + \frac{F_{ext}}{m} 
+% \end{equation}
+
+% We explicitly integrate Equation~\ref{eq:numerical-integration-equation}
+% to obtain a simulation of particle movement over time.  In practice, the most
+% popular explicit integration techniques include fourth-order Runge-Kutta
+% methods~\cite{jameson1981numerical}, the Gear predictor-corrector
+% method~\cite{allen1990computer}, and second-order ``velocity'' Verlet
+% integration~\cite{verlet1968computer}.  Each is appropriate in certain
+% situations; as such, we use Verlet integration
+% (Equations~\ref{eq:velocity-verlet-integration-position}
+% and~\ref{eq:velocity-verlet-integration-velocity}) due to its conservation of
+% energy at larger time steps and ease of computation, as discussed
+% in~\cite{balijepalli2010stochastic}.  Since the time step has a direct effect on
+% the number of iterations required to run a simulation (and thus its runtime), we
+% are interested in maximizing time step size while maintaining tight error
+% bounds.
+
+% \begin{equation}
+%  \label{eq:velocity-verlet-integration-position}
+%  X(t + \delta t) = X(t) + V(t)\delta t + \frac{1}{2} A(t) \delta t^2 + O(\delta
+% t^4)
+% \end{equation}
+
+% \begin{equation}
+%  \label{eq:velocity-verlet-integration-velocity}
+%  V(t + \delta t) = V(t) + \frac{A(t + \delta t) + A(t)}{2} \delta t + O(\delta
+% t^2)
+% \end{equation}
+
+% Given position $X(t)$ and velocity $V(t)$, we compute the
+% acceleration $A(t + \delta t )$ at the next time step using
+% Equation~\ref{eq:numerical-integration-equation}.  From here, the velocity
+% Verlet method provides position $X(t + \delta t)$ and $V(t + \delta t)$ in
+% a single pass.
+
+% The characteristic time scale of our entire model is given by the
+% relaxation time $\frac{m}{\gamma}$, with $\gamma = 6 \pi \eta r$ the drag
+% coefficient of Stokes' equations; this is the time needed for a particle's
+% initial velocity to converge to thermal equilibrium.  In our experiments, the
+% numerical integration time step $\delta t$ is set to the nearest multiple of
+% $100$ ns such that $\delta t << \frac{m}{\gamma}$. Choosing such a small $\delta
+% t$ provides opportunity to observe interesting nonequilibrium behavior in the
+% simulation.  Furthermore, this small time step decreases maximum error in both
+% velocity and position, bounded by the velocity Verlet to $O(\delta t^2)$ and
+% $O(\delta t^4)$, respectively.
+
+% \paragraph{Calculation of Optical Trapping Forces.}
+% Numerical integration of the basic scattering and gradient forces of radiation (see Ashkin's seminal
+% paper~\cite{ashkin1986observation}) yields our desired optical trapping forces.  Such integration is typically done by
+% tracing representative rays of light from the laser position through the workspace to the laser focus -- and possibly
+% through microspheres in the workspace.  By tracing the reflection and refraction of these simulated rays, a
+% reliable estimate of both the scattering and gradient forces can be computed.  In our prototype implementation, we rely
+% on code written in~\cite{banerjee2009real} to obtain these forces.
+
+% \subsection{Trapping Probability Estimates}
+% S.K. writes about motivation here?
+
+%\end{document}

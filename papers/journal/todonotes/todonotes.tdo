@@ -1,0 +1,25 @@
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Make a cake \ldots }}{2}{section*.2}
+\contentsline {todo}{Figure: {Make a sketch of the structure of a trebuchet.}}{2}{section*.2}
+\contentsline {todo}{{\color@box {}{green!40}{\leavevmode {\color {green!40}o}}\ And a green note}}{4}{section*.4}
+\contentsline {todo}{{\color@box {}{blue!20!white}{\leavevmode {\color {blue!20!white}o}}\ Anything but default colors}}{4}{section*.5}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ A note with no line connecting it to the placement in the original text.}}{4}{section*.6}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ A todonote placed in the text}}{4}{section*.7}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Fill those circles \ldots }}{5}{section*.9}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ A note with a large font size.}}{5}{section*.10}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Note with very small font size.}}{5}{section*.11}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Short note}}{5}{section*.12}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Short note with prepend}}{5}{section*.13}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Short note with noprepend}}{5}{section*.14}
+\contentsline {todo}{Figure: {Testing a long text string}}{6}{subsection.1.4}
+\contentsline {todo}{Figure: {Testing a long text string}}{6}{subsection.1.4}
+\contentsline {todo}{Figure: {Add a test image \ldots }}{6}{subsection.1.4}
+\contentsline {todo}{{\color@box {}{red}{\leavevmode {\color {red}o}}\ Test of newly defined command.}}{9}{section*.15}
+\contentsline {todo}{{\color@box {}{green}{\leavevmode {\color {green}o}}\ Test of newly defined command, requesting a green color.}}{9}{section*.16}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ 1: A numbered todonote.}}{9}{section*.17}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ 2: Another numbered todonote.}}{9}{section*.18}
+\contentsline {todo}{{\color@box {}{red!100!green!33}{\leavevmode {\color {red!100!green!33}o}}\ \textbf {Comment [\uppercase {HSM}1]:}\nobreakspace {}Testing first time.}}{10}{section*.19}
+\contentsline {todo}{{\color@box {}{red!100!green!33}{\leavevmode {\color {red!100!green!33}o}}\ \textbf {Comment [\uppercase {HSM}2]:}\nobreakspace {}Testing second time.}}{10}{section*.20}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Some lines with a decreased line spacing. This is accomplished using the setspace package that is included in standard latex distributions.}}{10}{section*.21}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ Examine this new section}}{11}{section*.22}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ \hypertarget {todo1}{} Translation}}{12}{section*.23}
+\contentsline {todo}{{\color@box {}{orange}{\leavevmode {\color {orange}o}}\ \hypertarget {todo2}{} Translation}}{12}{section*.24}

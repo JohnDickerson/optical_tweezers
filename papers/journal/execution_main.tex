@@ -1,0 +1,77 @@
+%\documentclass{article}
+%\begin{document}
+
+With the experimental setup fully initialized, we are ready to perform
+the massively parallel simulation of multiple particles on the GPU.
+For a specific point $x_*$ in the workspace, we perform $N = 1024$
+simulations in parallel.  Note that, for each individual simulation
+run, the return value is a binomial random variable of 0 (not trapped)
+or 1 (trapped); thus, for simulation sample sizes of at least $30$
+runs, its outcome can be fit to a Gaussian curve with mean $\mu =
+P_T$, the trapping probability, and variance $\sigma^2 = \frac{P_T (1
+  - P_T)}{N}$ ~\cite{Hines:2003}.  For $N = 1024$, this yields a $95\%$ confidence
+interval with maximum error of less than $\pm 0.03125$.
+
+
+After initializing $N$ particles to the desired starting position 
+$x_*$ and all active lasers to their initial positions and velocities, 
+we assign each particle and laser to a thread on the GPU.  
+We then execute Algorithm~\ref{alg:execution-main}.
+
+\begin{algorithm}[t]
+\caption{Parallel particle evolution on the GPU}
+\label{alg:execution-main}
+
+\begin{algorithmic}[1]
+ \REQUIRE Set of active threads, each with pre-initialized particle $p$ and laser $l$ with velocity $v$. Time limit
+$\textit{MAXTIME}$.
+ \ENSURE Positions of particle and laser after $\textit{MAXTIME}$.
+
+\FORALL{active threads (in parallel)}
+  \WHILE{particle $p$ is not trapped and time $t < \textit{MAXTIME}$}
+    \STATE calculate drag force\;
+    \STATE calculate Brownian motion\;
+    \STATE calculate sum of gravity, buoyancy, optical forces\;
+
+    \IF{$\textit{trapped}(p, l, v)$}
+      \STATE break\;
+    \ENDIF
+
+    \STATE second-order velocity Verlet integration to provide incremental update to velocity, position\;
+    \STATE update position of laser $l$ according to velocity $v$\;
+  \ENDWHILE
+
+  \RETURN final positions of $p$ and $l$\;
+\ENDFOR
+
+\end{algorithmic}
+\end{algorithm}
+
+Algorithm~\ref{alg:execution-main} computes the final positions of each of the $N$ particles after some predetermined
+period of time $\textit{MAXTIME}$.  The first loop (Line~1) executes in parallel on the GPU.  Line~3 calculates the
+current drag force being applied to the particle.  As shown in Equation~\ref{eq:langevins-equation}, the drag force is
+based on, among other things, a drag coefficient $\gamma$.  The value of $\gamma$ remains constant throughout the
+simulation; as such, our implementation makes use of constant memory on the GPU to realize significant speedup. 
+The nondeterministic Brownian force is calculated at Line~4 using the streaming GPU-specific random number generator
+discussed in Section~\ref{sec:parallel-overview}.  Line~5 calculates a summation of forces, including the optical
+force $F$ applied by the laser, through a combination of constant memory and texture memory.  Numerical evolution in
+Line~9 updates the positions of the particles and lasers through velocity Verlet integration; this already quick method
+is further sped up through GPU-specifc ``fast'' algebraic operations.
+
+When Algorithm~\ref{alg:execution-main} returns, the host gathers all
+$N$ final positions of particles $p_i$ for $i \in [1,N]$ and lasers
+$l$. It then computes the set of {\em trapped} particles,
+$\textit{TRAPPED}$, as follows:
+\begin{equation}
+\textit{TRAPPED} = \left\{ p_i | \textit{trapped}(p_i, l, v_l) \right\}
+\end{equation}
+
+In other words, the set of trapped particles, $\textit{TRAPPED}$, is the set of all particles, $p_{i}$, which, at the termination of the simulation, adhere to the trapping conditions of lasers $\ell_{j} \in l$ which are moving with corresponding velocities $v_{\ell_{j}}$.
+
+From this, the probability (with 95\% confidence interval of $\pm 0.03125$) that a particle starting from location $x_*$
+will be trapped by a laser with velocity $v_l$ within time period \textit{MAX\_TIME} is:
+\begin{equation}
+     P_T = \frac{\left|\textit{TRAPPED}\right|}{N}
+\end{equation}
+
+%\end{document}

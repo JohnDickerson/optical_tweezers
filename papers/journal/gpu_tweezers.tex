@@ -1,0 +1,427 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%% asme2ej.tex %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Template for producing ASME-format journal articles using LaTeX    %
+% Written by   Harry H. Cheng, Professor and Director                %
+%              Integration Engineering Laboratory                    %
+%              Department of Mechanical and Aeronautical Engineering %
+%              University of California                              %
+%              Davis, CA 95616                                       %
+%              Tel: (530) 752-5020 (office)                          %
+%                   (530) 752-1028 (lab)                             %
+%              Fax: (530) 752-4158                                   %
+%              Email: hhcheng@ucdavis.edu                            %
+%              WWW:   http://iel.ucdavis.edu/people/cheng.html       %
+%              May 7, 1994                                           %
+% Modified: February 16, 2001 by Harry H. Cheng                      %
+% Modified: January  01, 2003 by Geoffrey R. Shiflett                %
+% Use at your own risk, send complaints to /dev/null                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% use twocolumn and 10pt options with the asme2ej format
+\documentclass[twocolumn,10pt]{asme2ej}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+
+\usepackage{algorithms}
+\usepackage{algorithmic}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+%\makeatletter
+%\newif\if@restonecol
+%\makeatother
+%\let\algorithm\relax
+%\let\endalgorithm\relax
+%\usepackage{algorithm2e}
+
+\usepackage[colorlinks]{hyperref}
+%\usepackage[colorinlistoftodos, textwidth=4cm, shadow]{todonotes}
+
+\let\Omin\minute
+\let\minute\undefined
+
+\let\Ohour\hour
+\let\hour\undefined
+
+\usepackage{siunitx}
+
+\newcommand{\etal}{et al.}
+%%\usepackage{psfig} %% for loading postscript figures
+
+%% The class has several options
+%  onecolumn/twocolumn - format for one or two columns per page
+%  10pt/11pt/12pt - use 10, 11, or 12 point font
+%  oneside/twoside - format for oneside/twosided printing
+%  final/draft - format for final/draft copy
+%  cleanfoot - take out copyright info in footer leave page number
+%  cleanhead - take out the conference banner on the title page
+%  titlepage/notitlepage - put in titlepage or leave out titlepage
+%  
+%% The default is oneside, onecolumn, 10pt, final
+
+
+\title{Speeding Up Particle Trajectory Simulations under Moving Force Fields using GPUs}
+
+
+%%% first author
+\author{ Robert Patro
+    \affiliation{
+	Graduate Student\\
+	Inst. for Advanced Computer Studies\\
+	Department of Computer Science\\
+	University of Maryland\\
+	College Park, Maryland 20742\\
+    Email: rob@cs.umd.edu
+    }	
+}
+
+%%% second author
+\author{ John P. Dickerson
+    \affiliation{
+	Research Assistant\\
+	Inst. for Advanced Computer Studies\\
+	University of Maryland\\
+	College Park, Maryland 20742\\
+    Email: johnd@umiacs.umd.edu
+    }	
+}
+
+%%% third author
+\author{ Sujal Bista
+  \affiliation{
+    Graduate Student\\
+    Inst. for Advanced Computer Studies\\
+    Department of Computer Science\\
+    University of Maryland\\
+    College Park, Maryland 2072\\
+    Email: sujal@cs.umd.edu
+  }  
+}
+%%% fourth author
+\author{ Satyandra K. Gupta
+   \affiliation{ Professor, Fellow of ASME\\
+	Inst. for Systems Research\\
+	Department of Mechanical Engineering\\
+	University of Maryland\\
+	College Park, Maryland 20742\\
+   Email: skgupta@umd.edu
+   }
+}
+
+%%% fifth author
+\author{ Amitabh Varshney
+    \affiliation{ Professor\\
+	Inst. for Advanced Computer Studies\\
+	Department of Computer Science\\
+	University of Maryland\\
+	College Park, Maryland 20742\\
+    Email: varshney@cs.umd.edu
+    }
+}
+
+
+
+\begin{document}
+
+\maketitle    
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+
+  In this paper, we introduce a GPU-based framework for simulating particle trajectories under both static and dynamic force fields.  By exploiting the highly parallel nature of the problem and making efficient use of the available hardware, our simulator exhibits a significant speedup over its CPU-based analog.  We apply our framework to a specific experimental simulation: the computation of trapping probabilities associated with micron-sized silica beads in optical trapping workbenches.  When evaluating large numbers of trajectories ($4096$), we see approximately a $356$ times speedup of the GPU-based simulator over its CPU-based counterpart.
+
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\begin{nomenclature}
+%\entry{A}{You may include nomenclature here.}
+%\entry{$\alpha$}{There are two arguments for each entry of the nomemclature
+%environment, the symbol and the definition.}
+%\end{nomenclature}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% S.K.ized intro
+\section{Introduction}
+
+The simulation of particle movement under general force fields is of interest
+across many scientific disciplines.  For example, biochemists may wish to model
+stochastic diffusion of glutamate receptors~\cite{20233407}, while financial
+analysts may attempt to simulate point estimates of stock prices based on stochastic
+models~\cite{broadie2006exact}.  In this paper, we present a framework to
+simulate such general particle movement under user-defined force fields.  We apply this
+framework to the task of manipulating micro
+and nanoscale components using an optical force field. 
+
+Micro and nanoscale components can be
+used to exploit new phenomena that take place at the small scale
+~\cite{Bhus04}. Potential applications of such small components include
+bio-sensors, electronic components, photonic devices, solar cells, and
+batteries~\cite{Niem04,Wils02}.  In order to construct useful devices, micro and nanoscale components need to be
+assembled together. Assembling small components to make functional
+devices remains a challenge despite rapid advances in imaging,
+measurement, and fabrication at the small scale. Two types of assembly
+processes are possible at the small scale. The first type of process is
+self-assembly~\cite{Requ06}. This process is useful for large scale
+production. The second type of process is directed assembly. This
+process is useful for prototyping new design concepts, small scale
+production, device repair, and creating templates for certain types of
+self-assembly processes. In this paper, we limit ourselves to directed
+assembly processes. A number of manipulation techniques for directed
+assembly of small components have emerged.
+
+In order to manipulate a small component, the appropriate optical,
+electrostatic, or magnetic field (i.e., trap) needs to be created to
+trap the component. The field is then controlled to move the component. 
+In this paper, we focus on the optical force fields and traps associated with them. 
+Optical trapping takes place
+in a fluidic workspace. The interaction between the optical field and the
+component is stochastic in nature, due to the Brownian motion of the
+component, as well as the presence of uncertainty in the component location as
+a result of sensor errors. Unfortunately, the off-line planning
+approach that works well at the macroscale does not work at the
+small scale. To cope with the stochastic nature of the problem,
+automated microscale assembly requires a real-time and automated
+planning paradigm that takes actions based on the estimated state of
+the workspace in a feedback loop~\cite{Banerjee:2010:ieee}.
+
+In order to develop automated, real-time planning algorithms, we need
+to develop a fundamental understanding of the interaction of
+components with trapping fields. For example, we need to
+understand and characterize trapping probability, trap reliability,
+and trap robustness. The knowledge of the trapping probability will
+enable us to position the optical trap close enough to the
+component of interest so that it gets trapped. Moreover, any other
+component that drifts close enough to the optical trap, such that its
+trapping probability exceeds a certain threshold value, is a potential
+or imminent source of unintended trapping. Thus, appropriate collision
+prevention schemes need to be applied in such cases to avoid losing
+the trapped component. Under different operating conditions,
+components interact qualitatively differently with the
+trap. Unfortunately, the parameter space that describes different
+operating conditions is very large. Hence, simulation is the only
+viable option for characterizing the interactions between the trap and
+the component to facilitate real-time planning.   
+
+This paper presents a GPU-based method to simulate the trajectory of 
+particles under a force field. The method described in this
+paper is able to handle time varying force fields. The accuracy of
+computation depends on the accuracy of the force field. We illustrate
+the usefulness of this method by showing how it can be
+used to estimate trapping probabilities for moving optical traps. This
+new method presents considerable computational improvements over our
+previous approach to conducting CPU-based simulations for estimating
+trapping probabilities. The work presented in this paper enables fast
+computation of trapping probabilities. Faster computation of trapping
+probabilities presents three main advantages. First, it enables
+exploration of a much larger parameter space. Hence, it improves our
+understanding of trapping physics. Second, fast computation of
+trapping probabilities eliminates the need for the use of
+meta-modeling during the particle transport planning. Finally, faster
+computation enables more simulation runs and hence we get better
+estimates of the trapping probability.
+
+
+\section{Related Work}
+
+Since the initial discovery of optical gradient
+forces~\cite{ashkin1970acceleration} and subsequent invention of
+optical tweezers~\cite{ashkin1986observation}, the use of optical
+traps to manipulate micron-sized objects has been widespread.
+Simulations of the optical traps play an important role in utilizing
+optical tweezers as assembly tools at the micro and nanoscale~\cite{Banerjee:2010:ieee}. Early work in this area focused on
+trap and particle interactions and models were developed to estimate
+optical forces acting on spherical particles. As a part of our recent
+prior work, we developed a model to simulate the trajectory of a
+spherical particle under optical forces~\cite{
+  banerjee2009generating}. This model was implemented on a CPU and used
+to generate trapping probability estimates by conducting off-line
+simulations. A meta-model was developed to quickly query trapping
+probability estimates during the automated path
+planning~\cite{Banerjee:2010:ieee}. CPU-based simulations are very
+time consuming. Hence, in an offer to speed up the simulation process,
+we successfully implemented Brownian motion simulation on
+GPU~\cite{balijepalli2010stochastic}. The current paper builds on our
+previous work and presents a new GPU-based method for computing
+particle trajectories under optical force fields. In computing
+particle trajectories, it combines both the influence of Brownian
+motion and an optical force field in a single unified GPU-based
+framework.
+
+Graphics processors have evolved over the last decade from a
+fixed-function (rendering-only) pipeline to a highly flexible
+programmable pipeline.  One of the application areas that has received
+significant attention in this evolution has been physically-based
+simulations due to their application to simulation of environmental
+effects for 3D games~\cite{Owens:2007:ASO}. Some of the earliest work
+in this area involved physically-based wave simulations on 2D
+lattices~\cite{James:2001:operations}. More general Lattice-Boltzmann
+3D simulations for fluids and gases were later implemented on GPUs by
+Li et al.~\cite{LWK03,LFWK05}. Other fluid simulations on GPUs include
+work on Navier-Stokes equations for incompressible fluids (see review
+in this area by Harris~\cite{Harris:2005:fast-fluid}) as well as
+Euler-equations-based dynamics of ideal gases (Hagen et
+al.~\cite{Hagen:2006:euler}). Work on fluid simulation has also been
+extended to deal with
+obstacles~\cite{Bolz:2003:sparse,KW03,LLW04,STM04,Harris:2005:fast-fluid}. Visualization
+of flows on GPUs has been addressed through line-integral convolution
+and Lagrangian-Eulerian
+advection~\cite{Heidrich:1999:pixel-textures,JEH01,WHE01}.  Recent
+work by Juba and Varshney~\cite{Juba:2008:PSMM} shows the suitability
+of the GPUs for stochastic calculations.
+
+%, using Cg and CUDA respectively,
+Initial work has been done porting optical trapping simulations to
+graphics processors; however, to our knowledge, no GPU-based trapping
+probability estimation work exists.  \cite{reicherter:59301Y} and
+\cite{haist2006using} simulate the manipulation of glass microspheres
+within a holographic laser testbed.  Due to accelerated
+two-dimensional FFT calculations, both show significant computational
+speedups over their CPU-based counterparts.  Similar results are
+available for arbitrarily positioned dual-beam (``twin'')
+traps~\cite{hermerschmidt2007holographic}.  Using a model similar to
+ours, Balijepalli~\cite{balijepalli2010stochastic} provides an
+accuracy and error analysis of results from both CPU and GPU, along
+with experimental validation of the simulation.
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Calculating Trapping Probabilities}
+\label{sec:calculating-trapping-probabilities}
+\input{calculating_trapping_probs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Massively Parallel Simulations}
+\label{sec:parallel-simulations}
+
+\begin{figure*}[htb!]
+\includegraphics[width=2\columnwidth]{figures/cuda_architecture}
+\caption{The CUDA architecture provides for a logical hierarchy of
+  parallelism that maps well to the hardware.  The computational
+  kernel is run in parallel among a large number of threads which are
+  grouped into $1$,$2$ or $3$ dimensional thread blocks.  Threads
+  within a block may communicate using the shared memory or coordinate
+  execution using synchronization primitives.  The blocks are likewise
+  grouped into $1$,$2$ or $3$ dimensional grids.  Each thread is able
+  to access its own grid, block and thread identifiers.}
+\label{fig:cuda_arch}
+\end{figure*}
+
+
+\subsection{Overview}
+\label{sec:parallel-overview}
+\input{parallel_overview}
+
+\subsection{Trapping Criteria}
+\label{sec:trapping-criteria}
+\input{trapping_criteria}
+
+\subsection{Execution}
+\label{sec:execution-main}
+
+\begin{figure}[htb!]
+\includegraphics[width=\columnwidth]{figures/overview}
+\caption{ An overview diagram of our system showing the distribution
+  of work and the flow of data between the host and the device (GPU).
+  Currently, the host is used only to load the initial simulation
+  parameters and set the initial particle positions.  The device
+  performs the simulation of the particle trajectories and returns the
+  final positions to the host, which then simply computes the fraction
+  of trapped particles corresponding to each initial position.  }
+\label{fig:overview}
+\end{figure}
+
+\input{execution_main}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+\label{sec:results}
+
+\subsection{Trapping Probabilities}
+\input{res_trapping_probabilities}
+
+\subsection{Timing}
+\input{res_speedup}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion and Future Work}
+
+We have introduced a GPU-based framework for massive simulation of particle
+motion under user-defined force fields.  We applied this framework
+experimentally to the well-studied problem of computing the trapping
+probabilities associated with micron-sized silica beads in optical
+trapping workbenches.  The simulator handles both stationary and
+moving laser-induced force fields and, due to the highly parallel nature of the problem
+and efficient use of the available hardware, exhibits a significant
+speedup over its CPU-based analog. In particular, when evaluating many
+trajectories ($4096$), we see approximately a $356$ times speedup of
+the GPU based simulator over its CPU based counterpart.  This speedup
+is more than can be accounted for by the increased processor count on
+the GPU, and we attribute the extra performance to the higher memory
+bandwidth, spatially coherent caching, and hardware accelerated
+bilinear interpolation of the laser force field in the GPU simulator.
+In particular, this last operation must be performed in software on
+the CPU.  We believe this work indicates that GPUs hold great promise
+in accelerating the type of compute-intensive simulations that are
+required when working with optical tweezers and nanoscale assembly in
+general.  Often times, the stochastic nature of such simulations leads
+to a probabilistic approach involving many independent trials, a setup
+whose parallelism uniquely suits the type of high-throughput
+computation enabled by modern GPUs.
+
+In the future, we are interested in extending this work to deal with
+more general types of nanocomponents, perhaps even those which cannot
+be defined analytically.  We are also interested in investigating
+other areas of the optical workbench workflow where GPUs can be used
+to accelerate computational bottlenecks in the process.
+
+
+%\todo[inline]{Why our results are good}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\section{Future Work}
+%\todo[inline]{Where we intend to take this work in the future}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{acknowledgment}
+  This work has been supported in part by the NSF grants: CCF
+  04-29753, CNS 04-03313, CCF 05-41120 and CMMI 08-35572. We also
+  gratefully acknowledge the support provided by the NVIDIA CUDA
+  Center of Excellence award to the University of Maryland and
+  constructive discussions with David Luebke at NVIDIA research. Any
+  opinions, findings, conclusions, or recommendations expressed in
+  this article are those of the authors and do not necessarily reflect
+  the views of the research sponsors.
+\end{acknowledgment}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The bibliography is stored in an external database file
+% in the BibTeX format (file_name.bib).  The bibliography is
+% created by the following command and it will appear in this
+% position in the document. You may, of course, create your
+% own bibliography by using thebibliography environment as in
+% \begin{thebibliography}{12}
+% ...
+% \bibitem{itemreference} D. E. Knudsen.
+% {\em 1966 World Bnus Almanac.}
+% {Permafrost Press, Novosibirsk.}
+% ...
+% \end{thebibliography}
+
+% Here's where you specify the bibliography style file.
+% The full file name for the bibliography style file 
+% used for an ASME paper is asmems4.bst.
+\bibliographystyle{asmems4}
+
+% Here's where you specify the bibliography database file.
+% The full file name of the bibliography database for this
+% article is asme2e.bib. The name for your database is up
+% to you.
+\nocite{*}
+\bibliography{gpu_tweezers}
+
+\end{document}

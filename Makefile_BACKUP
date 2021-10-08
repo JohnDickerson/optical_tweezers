@@ -1,0 +1,28 @@
+# John Dickerson, Rob Patro, Amitabh Varshney -- 20 September 2009
+# Makefile for Optical Tweezers (Serial)
+
+CC = g++
+
+DEBUG = -g -ggdb
+CFLAGS = -Wall $(DEBUG)
+LFLAGS = -Wall $(DEBUG)
+
+OBJS = driver.o vector3d.o physobj.o particle.o laser.o constants.o io.o
+SRCS = $(OBJS, .o=.c)
+
+PROJ = tweezers
+
+all: $(PROJ)
+	
+$(PROJ): $(OBJS)
+	$(CC) $(LFLAGS) -o $(PROJ) $(OBJS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $(SRCS) 
+
+clean:
+	rm -f *.o $(PROJ) $(BMPTEST) *~
+
+tar:
+	tar cfv $(PROJ).tar *.cpp *.h
+

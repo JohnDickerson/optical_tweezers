@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}
+\BOOKMARK [2][-]{subsection.1.1}{Usage}{section.1}
+\BOOKMARK [2][-]{subsection.1.2}{Package options}{section.1}
+\BOOKMARK [2][-]{subsection.1.3}{Options for the todo command}{section.1}
+\BOOKMARK [2][-]{subsection.1.4}{Options for the missingfigure command}{section.1}
+\BOOKMARK [2][-]{subsection.1.5}{Options for the listoftodos command}{section.1}
+\BOOKMARK [2][-]{subsection.1.6}{Known issues}{section.1}
+\BOOKMARK [2][-]{subsection.1.7}{Things to improve}{section.1}
+\BOOKMARK [2][-]{subsection.1.8}{Usage methods}{section.1}
+\BOOKMARK [1][-]{section.2}{Implementation}{}
+\BOOKMARK [2][-]{subsection.2.1}{Declaration of options for the package}{section.2}
+\BOOKMARK [2][-]{subsection.2.2}{Options for the todo command}{section.2}
+\BOOKMARK [2][-]{subsection.2.3}{The main code part}{section.2}

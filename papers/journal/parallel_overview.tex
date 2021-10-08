@@ -1,0 +1,136 @@
+We leverage the massively parallel architecture of the GPU to expedite
+the calculation of trapping probabilities over a wide range of
+locations relative to the focal point of the laser.  In particular, we
+consider a discrete grid, $G = \{[y_{i},z_{j}]\}$ of particle
+locations.  
+
+% Whoops, this is the force texture, not the evaluation grid 
+
+% In all of our experiments, we consider
+% $\SI{0}{\micro\meter} \le y_{i} \le \SI{20}{\micro\meter}$ and
+% $\SI{-20}{\micro\meter} \le z_{i} \le \SI{8}{\micro\meter}$, leading
+% to a total of $560$ grid cells at which the trapping probability needs
+% to be evalutated. 
+
+As detailed in section~\ref{sec:calculating-trapping-probabilities},
+the particles we are interested in trapping undergo motion governed
+by the Langevin equation; which contains a stochastic component
+modeling the Brownian motion of the particles.  Thus, a reliable
+estimate of the trapping probability at a particular grid cell,
+$[y,z]$, can only be obtained by repeatedly simulating the trajectory
+of a particle intially placed at $[y,z]$.  To obtain a $95\%$
+confidence interval of less than $\pm 0.03125$ on our estimated trapping probability, we 
+simulate the particle trajectories $1024$ times at each grid cell.  The
+greater the degree of confidence we require, the more trajectories we
+must simulate for each cell on the simulation grid $G$.  This is a
+highly computationally intensive, but inherently parallel process.  In
+particular, the estimation of the trapping probability at each grid
+cell can be done independently.
+
+Though the parallel nature of the problem is straightforward,
+consideration is still required if we are to achieve optimal
+performance on current hardware.  In all of the experiments detailed
+below, we have performed the trapping probability estimates on an
+Nvidia Tesla S1070; a GPU computing oriented, CUDA capable device.  A
+diagram of the CUDA architecture -- how the threads of execution and
+memory are arranged -- is provided in Figure~\ref{fig:cuda_arch}.
+
+\paragraph{GPU vs. CPU implementations}
+While this paper focuses on a GPU implemetation of the trapping
+probability calculation, we wish to draw attention to the fact that it
+is the massively parallel nature of this computation, and not the
+specific GPU implementation, that is of the broadest interest.  In
+particular, the CPU implementation with which we contrast our GPU
+implementation, while reasonably efficient, still has many avenues for
+optimization.  Specifically, we compare GPU performance against a
+single-threaded CPU implementaion that does not take advantage of
+vectorized instructions.  While it is certainly true that the CPU
+implemenation could be improved to offer better performance, the most
+important observation is the rate at which the simulation results
+scale.  Since each simulation can be performed independently, the
+overall computation of trapping probabilities is massively data
+parallel.  Thus, while the performance gap between the two
+implementations can undoubtedly be shrunken somewhat, the
+data-parallel nature of the problem ensures that scalable parallel
+architecture of the GPU will continue to provide a very significant
+benefit.
+
+\subsection{Data Structures}
+\label{sec:data-structures}
+
+There are two obvious was to parallelize the computation of trapping
+probabilities: among grid cells or among particles.  We choose the
+latter of these two as we feel it offers more flexiblity and
+allows us to maximally utilize the GPU.  There are four major sources
+of input to the simulation kernel:
+
+\begin{enumerate}
+\item an array of particles
+\item a force grid
+\item a set of fundamental physical constants
+\item a stream of pseudorandom numbers
+\end{enumerate}
+
+Care must be taken to ensure that each of these input sources is
+amenable to GPU computation.  Each particle maintains a position,
+velocity, acceleration, and state variable.  The position, velocity
+and acceleration are given as vectors in $\mathbb{R}^{3}$, while the
+state variable is a simple boolean value which is examined to
+determine if simulation for this particular particle should continue.
+Thus, we can imagine each particle as a tuple $p_{i} =
+(\mathbf{x}_{i}, \mathbf{v}_{i}, \mathbf{a}_{i}, s_{i})$, and the
+array of $N$ particles simply becomes $P = \{p_{i}\}_{0 \le i < N}$.
+While this is logically convenient, it is much more efficient to store
+the particles as a structure of arrays (SoA) rather than the array of
+structures (AoS) detailed above.  Hence, we consider the array of
+particles as $P = \{X, V, A, S\}$, where $X$, $V$, $A$, and $S$ are
+each arrays of length $N$ storing in their $i^\text{th}$ position the
+respective field for the $i^\text{th}$ particle.  Because of the
+manner in which the GPU threads access memory, the SoA approach allows
+coalesced memory access for groups of threads, and hence, requires
+fewer memory reads.
+
+The force grid is a $2$D array of values, representing a discrete
+sampling of the force function, $\mathcal{F} \colon
+\mathbb{R}^{2} \to \mathbb{R}^{2}$, which maps input grid positions to
+output force vectors.  In our case, since $\mathcal{F}$ is fairly well behaved,
+it suffices to take a discrete uniform sampling of this function at
+intervals of $\SI{0.25}{\micro\meter}$ for all $0 \le y \le 20$ and
+$-20 \le z \le 8$.  The value at all intermediate locations is
+estimated by means of a bilinear interpolation of the values at the
+nearest sample positions.  We choose to store our discrete force grid,
+$F$, as a texture.  This results in two main benefits.  First,
+access to texture memory is cached, resulting in faster average access
+times for looking up force values for spatially coherent particles.
+Second, the GPU has dedicated hardware for performing bilinear
+interpolation.  Thus, by storing $F$ as a texture, we benefit both
+from faster access to the force values as well as hardware accelerated
+bilinear interpolation.
+
+We also require access to some physical constants to compute particle
+trajectories.  Storing these constants in the global GPU memory makes
+access, which is required for each simulation timestep, expensive.
+However, storing local copies of all of these constants is highly
+wasteful.  In fact, all CUDA capable devices have a special read-only
+segment of memory reserved for constants, for which access is cached.
+Utilizing this constant memory allows us fast yet global access to the
+set of physcial constants required to evalute the governing equations
+of the particles' dynamics.
+
+Finally, the simulation requires a stream of pseudo-random numbers to
+model the Brownian motion of the particles.  To provide these random
+numbers, we adapt the GPU implementation used by
+Meel~\etal~\cite{Meel:2008:MDGPU}.  Each particle maintains a state
+which determines its current position in the pseudo-random
+progression.  During the actual simulation, uniformly distributed
+pseudo-random numbers are generated on demand by a GPU kernel and
+subsequently transformed into random samples from the standard normal
+distribution by mean of the Box-Muller transform.
+
+
+By making careful considerations in the layout and structure of our
+data, and by exploiting the special hardware provided by the GPUs, we
+are able to make efficient use of these devices when parallelizing our
+estimates of trapping probability.
+
+%Since trapping probabilities can be computed in complete isolation 

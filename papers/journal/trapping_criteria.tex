@@ -1,0 +1,60 @@
+%\documentclass{article}
+%\begin{document}
+
+Reliably classifying a specific particle as ``trapped'' or ``not trapped'' is
+necessary to provide accurate overall trapping probabilities.  To accomplish
+this goal, we provide a simple parallelizable method that returns, once per
+particle, a $0$ (not trapped) or $1$ (trapped) upon termination.
+
+Similar to~\cite{banerjee2009generating}, the following conditions sufficiently
+describe the termination criteria for our method:
+\begin{enumerate}
+ \item \label{termination-fallout} Particle falls to the bottom of the
+workspace $\rightarrow 0$.
+ \item \label{termination-geometric} Particle strays outside the bounds
+of the force field $\rightarrow 0$.
+ \item \label{termination-timeout} Total experimental time is
+expended without trapping $\rightarrow 0$.
+ \item \label{termination-trapped} Particle is trapped $\rightarrow 1$.
+\end{enumerate}
+
+These termination criteria are supressed in certain
+situations. Specifically, criterion~\ref{termination-fallout} is
+ignored if the particle remains affected by the laser forces.
+Furthermore, criterion~\ref{termination-geometric} is supressed if
+either the particle is sufficiently close to the trap focus (as it
+will be affected by strong optical gradient forces) or if the laser
+has nontrivial horizontal velocity (as the cone of the laser might
+move to intersect with the particle).
+
+Criterion~\ref{termination-trapped} returns when, informally, the
+optical forces imparted on a particle by the laser effectively
+overpower all other acting forces (\emph{e.g.}, Brownian motion,
+gravity, and buoyancy).  For a stationary laser (velocity $v =
+\textbf{0}$), this amounts to a trapped particle remaining within
+fixed distance $d^v_z$ beneath the laser and distance $d^v_{xy}$ along
+the X- and Y-axes.  For a laser with nontrivial horizontal or vertical
+velocity, both $d^v_z$ and $d^v_{xy}$ change considerably as a
+function of both laser velocity and particle size.
+
+The calculation of these trapping boundaries will potentially change
+from experiment to experiment due to, for example, an adjustment in
+the power of the laser; however, we assume that such environmental
+variables will remain static across a single experimental run.  We do
+expect both the horizontal and vertical components of the laser's
+velocity to change over the course of a single experiment. As such, we
+adopt a strategy of one-time computations of radial and axial trapping
+bounds $d^v_{xy}$ and $d^v_{z}$ for different base laser velocities,
+relying on interpolation to provide bounds for any velocity.
+
+For a stationary laser, we place $1024$ particles at the origin and
+execute a version of our full parallel simulation, described in
+Section~\ref{sec:execution-main}, for $50$ms.  Over this time period,
+all of these particles fall into the optical trap; our simulation
+records the variation in both radial and axial displacement of the
+particle.  Upon termination, we select the maximum of the maximum
+radial and axial displacements as our final, stationary trapping
+bounds.  This approach generalizes to a moving laser through
+supression of criterion~\ref{termination-geometric}, as defined above.
+
+%\end{document}

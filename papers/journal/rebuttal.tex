@@ -1,0 +1,192 @@
+%%% use twocolumn and 10pt options with the asme2ej format
+\documentclass[10pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{siunitx}
+
+%\makeatletter
+%\newif\if@restonecol
+%\makeatother
+%\let\algorithm\relax
+%\let\endalgorithm\relax
+%\usepackage{algorithm2e}
+
+\usepackage[colorlinks]{hyperref}
+%\usepackage[colorinlistoftodos, textwidth=4cm, shadow]{todonotes}
+
+\title{Response to reviewer comments for ``Speeding Up Particle
+  Trajectoy Simulations under Moving Force Fields using GPUs''}
+\begin{document}
+\maketitle
+
+\section*{}
+We wish to thank the reviewers for their very insightful comments.
+
+\subsection*{Reviewer 1 Concerns:}
+\subsubsection*{General comments:}
+
+While reviewer 1 brings up several valid points concerning the optimization of our CPU
+based implementation, the goal of this work, from a computational
+standpoint, was to demonstrate that the problem of estimating trapping
+probabilities under the given physical model, can benefit from GPU-based parallel computation.
+To this end, we concentrate more on exploiting
+parallelism where it exists, and examining the scaling behavior
+(i.e. number of threads vs. running time) of the simulation.  The
+authors believe that it is this scaling behavior, more than the
+absolute performance numbers, which shows the promise of performing
+these simulations in a massively parallel environment; regardless of 
+the underlying hardware.
+
+
+\subsubsection*{Specific Comments:}
+\begin{enumerate}
+
+\item The CPU code was reasonably optimized for cache locality.  We
+  made the effort, where possible, to keep memory access local and
+  contiguous.
+
+\item No attempt was made to run the problem using OpenCL on both
+  architectures.  The authors who wrote the code for the GPU
+  simulation ran all of the experiments on Nvidia hardware, and, in
+  conjunction with their previous experience, this made CUDA a natural
+  choice.  Also, when this manuscript was originally written and
+  submitted, the CPU-based OpenCL SDK was in a somewhat preliminary
+  and unoptimized state; it may have actually detracted from the 
+  performance of the CPU-based simulator.
+  
+\item The CPU implementation was not parallelized.  Rather, we wanted
+  to draw an explicit comparison between the performance of a
+  single-threaded vs. highly parallelized version of the simulator.
+  This allowed us to avoid issues concerning which CPU-based
+  parallelization framework to use, and the implications of the
+  performance overhead they impose.  We have updated the manuscript to
+  make the single-threaded nature of the CPU based implementation more
+  clear.
+
+\item Neither the CPU nor GPU code was implemented in a matrix/vector
+  formulation.  It is absolutely true that formulating our simulation
+  in terms linear algebraic operations and implementing these using a
+  high performance library could significantly increase the
+  performance of the CPU based simulator.  However, we would also like
+  to point out that previous work suggests that similar performance
+  gains can be realized on the GPU by formulating one's problems in
+  terms of linear algebraic operations.
+
+\end{enumerate}
+
+
+
+\subsection*{Reviewer 2 Concerns:}
+
+\begin{enumerate}
+
+\item Our original CPU results were computed using
+  single-precision floats and mathematical operations.  Thus, the
+  timing comparisons are between the single-precision CPU and
+  single-precision GPU simulators. Additionally, we've included an
+  analysis of single vs. double precision simulation results to
+  address the concern that a significant loss of accuracy may occur.
+
+\item The CPU implementation against which we compared is
+  single-threaded.  Please see point (3) above for an explanation of
+  this comparison.  Also, we've updated the manuscript to make this
+  point clear.
+
+\item We've added new figures to address the accuracy concerns, and
+  have cleaned up the original figures.
+
+\end{enumerate}
+
+
+
+\subsection*{Reviewer 3 Concerns:}
+\begin{itemize}
+
+\item Defined variables in section 3.1
+
+\item 
+	%\textcolor{red}{Halfway down the 2nd column of p. 3 you say
+    %given $X(t)$, compute using Equation 2, but equation 2 doesn't use
+    %$X(t)$ as an input.}	
+	We have clarified the Equation 2 and the statement mentioned.
+
+
+\item Clarified nature of how ``trapped'' particles are handled in our simulation
+
+\item 
+	%\textcolor{red}{A the end of p.3, 1st column, you talk about scaling to include $\delta_{t}$, 
+    %but equation 2 also takes a square root? This should be explained.}
+	We have added details regarding the equation 2 issue.
+
+\item 
+	%\textcolor{red}{Why was $0.25$ chose as the interval (end of p.4, column 2)?}
+ The diameter of each nano particle is $\SI{5}{\micro\meter}$. We choose the grid interval to be $\SI{0.25}{\micro\meter}$
+  because it is relatively smaller than the size of each particle and will give us more accurate result.
+
+
+\item The purpose of figure 1 is to explain, at a high level, the GPU
+  architecture, and how this hardware design affects algorithms and
+  implementation decisions.  Such diagrams are generally useful to
+  those who are unfamiliar with GPU architecture.
+
+\item 
+	%\textcolor{red}{Portions of section 4.4 imply that there can be multiple lasers, but I don't 
+    %think the algorithm works for multiple lasers.}
+Currently, our work is only focused on a single laser. 
+
+\item 
+	%\textcolor{red}{p.6, column 2 halfway down, what is $N_{s}$ Did
+    %you plot the results to confirm the expected Gaussian
+    %distribution?  What is the maximum error in?  Doesn't it depend on
+    %the mean value?}
+$N_{s}$ has been replaced by N (which is the number of particles used).
+ We have also plotted the result and verified that the result is a Gaussian distribution.
+
+
+\item ``each of these particles falls into the optical trap'' $\to$ ``all of these particles fall into the optical trap''
+
+\item Equation 5 classifies the set of trapped particles using
+  standard set notation.  It explains that the set of trapped
+  particles (TRAPPED) is the set containing all particles $p_{i}$,
+  such that particle $p_{i}$ was trapped by laser $l$, which is moving
+  with velocity $v_{l}$.
+
+\item As stated in section 4.4, $1024$ simulations are sufficient to
+  obtain a $95\%$ confidence interval (i.e. $95\%$ of the true trapping 
+  probabilities reside within a deviation of $\pm 0.03125$ from our trapping
+  probability estimate).
+
+\item A detailed comparison of the CPU and GPU computations has been
+  made, and both a visual relative error plot, as well as a numerical
+  analysis of the relative numerical differences between the two has
+  been presented. 
+
+\item The issue of precision and the axis ranges have been addressed.
+
+\item We changed the wording of the section which describes the
+  GPU-based implementation's speed up to reflect the fact that we are
+  suggesting, rather than asserting, what may account for the
+  superlinear speed increase we observed.
+
+\item The flatness between $\sim 100$ and $\sim 1000$ in figure $10$ can be attributed to the fact
+  that until $\sim 1000$, the GPU does not reach full resource utilization.  Thus, between $\sim 100$ and 
+  $\sim 1000$, we can add more particles essentially ``for free'' without incurring any additional resource
+  contention.
+
+\item 
+	%\textcolor{red}{Do the results get more accurate with more
+    %particles?  How do you know how much?}
+The nano particles are affected by the Brownian motion which follows the normal distribution. 
+So as the number of particles increase the accuracy of the simulation is expected increase.
+
+\item Perhaps the sparsity of labels on the log-log scale make the
+  timings a bit difficult to extract.  The x-axis runs from $1$ to
+  $32768$.  The simulator takes $12.27$ seconds for $8$ particles and
+  $23.0048$ seconds for $4096$ particles, so the runtime slows by a factor
+  of $\sim 1.875$ between $8$ and $4096$ particles.
+
+\end{itemize}
+
+\end{document}
